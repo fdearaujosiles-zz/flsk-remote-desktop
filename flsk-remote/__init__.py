@@ -1,3 +1,4 @@
+import time
 import subprocess
 from . import search as src
 from flask import Flask, request, session, g, redirect, url_for, abort, \
@@ -20,6 +21,36 @@ def command_terminal(bash, no_output=False):
         print(bash)
         print(output, error)
 
+def seek_and_destroy(seek):
+    
+    flag = True
+    first_run = True
+
+    while flag:
+        
+        process = subprocess.Popen("wmctrl -l", stdout=subprocess.PIPE, shell=True)
+        x, y = process.communicate()
+        x = str(x)[:-3]
+         
+        all_windows = x.split("  0 fsiles ")
+        mozilla = [s for s in all_windows if "Mozilla" in s]
+
+        if first_run:
+            tab = mozilla
+            first_run=False
+        elif mozilla == tab:
+            flag = False
+            break
+        
+        print("\n{}\n".format(mozilla))
+        for s in mozilla:
+            if seek.lower() in s.lower():
+               command_terminal('firefox --new-tab google.com; wmctrl -a firefox;xdotool key Ctrl+w;xdotool key Ctrl+w;', no_output=True)
+               flag = False
+            else:
+                command_terminal('firefox --new-tab google.com; wmctrl -a firefox;xdotool key Ctrl+w;xdotool key Ctrl+Tab;', no_output=True)
+
+
 @app.route("/")
 def index():
     return render_template('index.html')
@@ -33,71 +64,36 @@ def firefox():
 
         command_terminal('firefox "{}"'.format(args))
 
-    elif "play" in args[:4].lower() and "on deezer" in args[-9:].lower():
+    elif "@dzr" in args[:4].lower():
 
-        play_dzr = src.deezer(args[5:-10], limit="1")["data"][0]["link"]
+        play_dzr = src.deezer(args[5:], limit="1")["data"][0]["link"]
         command_terminal('firefox "{}"'.format(play_dzr))
 
-    elif "play" in args[:4].lower():
+    elif "@p" in args[:2].lower():
         
-        first_run = True
-        flag = True
-        while flag:
-
-            process = subprocess.Popen("wmctrl -l", stdout=subprocess.PIPE, shell=True)
-            x, y = process.communicate()
-            x = str(x)[:-3]
-            
-            all_windows = x.split("  0 fsiles ")
-            mozilla = [s for s in all_windows if "Mozilla" in s]
-
-            if first_run:
-                tab = mozilla
-                first_run=False
-            elif mozilla == tab:
-                flag = False
-                break
-
-            for s in mozilla:
-                if "youtube" in s.lower():
-                    command_terminal('firefox --new-tab google.com; wmctrl -a firefox;xdotool key Ctrl+w;xdotool key Ctrl+w;', no_output=True)
-                    flag = False
-                else:
-                    command_terminal('firefox --new-tab google.com; wmctrl -a firefox;xdotool key Ctrl+w;xdotool key Ctrl+Tab;', no_output=True)
-        
-        search = args[5:] if not "on youtube" in args else args[5:-11]
+        seek_and_destroy('youtube')
+                   
+        search = args[3:]
         play_yt = src.youtube(search)
         command_terminal('firefox --new-tab {};'.format(play_yt))
-
-    elif "exit" in args.lower():
-
-        first_run = True
-        flag = True
-        while flag:
-
-            process = subprocess.Popen("wmctrl -l", stdout=subprocess.PIPE, shell=True)
-            x, y = process.communicate()
-            x = str(x)[:-3]
-            
-            all_windows = x.split("  0 fsiles ")
-            mozilla = [s for s in all_windows if "Mozilla" in s]
-
-            if first_run:
-                tab = mozilla
-                first_run=False
-            elif mozilla == tab:
-                flag = False
-                break
-
-            for s in mozilla:
-                if "youtube" in s.lower():
-                    command_terminal('firefox --new-tab google.com; wmctrl -a firefox;xdotool key Ctrl+w;xdotool key Ctrl+w;', no_output=True)
-                    flag = False
-                else:
-                    command_terminal('firefox --new-tab google.com; wmctrl -a firefox;xdotool key Ctrl+w;xdotool key Ctrl+Tab;', no_output=True)
     
-    elif "shutdown" in args.lower():
-        command_terminal("sudo shutdown")
+    elif "@cmd" in args.lower()[:4]:
+        command_terminal(args[5:])
+    
+    elif "@op" in args.lower()[:3]:
+        seek_and_destroy("oioi")
+        bash = 'firefox --new-tab "https://jajji.onepieceex.com.br/?midia=1&numero={}"'.format(args[4:]) 
+        print(bash)
+        command_terminal(bash)
+        command_terminal('firefox --new-tab google.com; wmctrl -a firefox;xdotool key Ctrl+w;', no_output=True)
+        time.sleep(2)
+        command_terminal('xdotool key Return;', no_output=True)
+        time.sleep(1)
+        command_terminal('xdotool key space', no_output=False)
+               
+
+    elif "@q!" in args.lower()[:3]:
+        seek_and_destroy(args[4:])
 
     else:
         args = args.replace(" ","%20").lower()
